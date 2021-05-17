@@ -44,7 +44,7 @@ title('Delayed input signal')
        FI(t1) = sum(y .* xdelay(t1,:)); 
     end
 
-   % integral = (sum(abs(FI)));
-   % FI = FI/integral;   % normalize to 1.0
+   integral = (sum(abs(FI)));
+   FI = FI/integral;   % normalize to 1.0
     
 return

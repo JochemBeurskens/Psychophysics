@@ -21,7 +21,7 @@ close all
 if nargin<2 
     b=2;
 end
-if narginM<1
+if nargin<1
    a= 1;
 end
   

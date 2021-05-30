@@ -24,9 +24,9 @@
 %
 %      check wiener.m for a simple example that you can use as inspiration
 %
-function G2 = convh2xx(h2, x, V_flag)
+function G2 = convh2xx(h2, x, P, V_flag)
 
-      if nargin<3 
+      if nargin<4 
           V_flag = 0;  % Wiener functional, not Volterra
       end
       

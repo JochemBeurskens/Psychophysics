@@ -62,7 +62,7 @@ y0 = yt - G0;      % the Lee-Schetzen method: subtract h0 from the response
 %
 fi1 = phi_yx2(y0, gwnt, length(tf)-1);   %first-order kernel
 h1=fi1/P;       % only positive tau! 
-h1(200:end)=0; %listened to the hint, this reduced the noise a lot indeed
+h1(100:end)=0; %listened to the hint, this reduced the noise a lot indeed
 %although I think a closer approximation is obtained for 200:end being 0,
 %as there is some information between 150 and 200 (in the shape of a peak)
 s=sum((h1)); %get a sum over h1 of one if we take away the absolute value, but get worse results
@@ -103,7 +103,7 @@ y1 = yt - G0 - G1;    % residue, corrected for G0 and G1
 %
 %    second order kernel: 3rd-order cross-correlation
 %
-fi2=phi_yxx2(y1, gwnt, length(tf)-1);              
+fi2=phi_yxx2(y1, gwnt, 1000-1);              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
 %h2(1:200,1:200)=0;
 s = sum(sum((h2)));  % total integral of the kernel
@@ -121,10 +121,12 @@ plot(yt);
 hold on
 plot(G0+G1+G2);
 legend('G2','y(t)','total')
-
+disp("corr total and yt");
 disp(corrcoef((G0+G1+G2),yt));
-disp(corrcoef((G2),yt));
-disp(corrcoef((G1),yt));
+disp("corr G2 and yt");
+disp(corrcoef((G2),y1));
+disp("corr G1 and yt");
+disp(corrcoef((G1),y0));
 figure(2)
 imagesc(h2(1:100,1:100));    % Look parallel to the main diagonal!
 axis xy

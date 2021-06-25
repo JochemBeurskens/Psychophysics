@@ -94,16 +94,13 @@ title('Predicted first-order kernel (h1) and the model linear filter (g)');
 
 G1 = conv(gwnt, h1);      % 1e order Wiener prediction with the scaled kernel 
 G1 = G1(1:length(gwnt));
-figure(4)
-plot(G1); %/8.5) %when ht is not normalised then we need to divide h1 by ~8.5 for them to have the same order
-legend('u(t)','y(t)','G1');
 
 y1 = yt - G0 - G1;    % residue, corrected for G0 and G1
 
 %
 %    second order kernel: 3rd-order cross-correlation
 %
-fi2=phi_yxx2(y1, gwnt, 1000-1);              
+fi2=phi_yxx2(y1, gwnt, 999); %originally length(tf)-1 as third parameter              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
 h2(150:end,150:end)=0;
 s = sum(sum((h2)));  % total integral of the kernel
@@ -114,6 +111,10 @@ disp(sum(sum(h2))*dt);
 %  your predictions! Play with this.
 %%%%%%%%%%%%%%%%%%
 G2 = convh2xx(h2,gwnt,P);      % 1e order Wiener prediction with the scaled kernel 
+figure(4)
+plot(G0+G1+G2); %/8.5) %when ht is not normalised then we need to divide h1 by ~8.5 for them to have the same order
+legend('u(t)','y(t)','Prediction');
+
 figure(10)
 plot(G2);
 hold on

@@ -26,6 +26,65 @@ if nargin<1
 end
   
 gwnt = 0.5 * randn(1,4000);    % gaussian noise with power (close to) 0.5
+%now check the gwnt signal for its properties
+close all;
+%gwnt = 0.5 * randn(1,4000);
+%gwnt2 = 0.5 * randn(1,4000);
+[f,xi] = ksdensity(gwnt,'Function','pdf'); 
+sigma=std(gwnt);
+mu=mean(gwnt);
+x=linspace(-5,5,100);
+g=(1/(sqrt(2*pi)*sigma))*exp(-((x-mu).^2)/(2*sigma^2));
+%g is the theoretical gaussian, given the mean and std of gwnt
+figure(100)
+plot(xi,f);
+hold on
+plot(x,g);
+legend('Measured','Theoretical')
+xlabel('x')
+ylabel('P(x)')
+
+fs = 1000; % sample frequency (Hz), is 1000 Hz as dt is 1ms, as resolution of signals is 1ms
+%now using a sinusoidal example from mathworks.com, to compare the values
+%to. Note that the power range of this signal is way larger, thus we can
+%conclude that our signal is nearly flat.
+%uncommend the code below to show the sinusoidal. And uncommend the hold on
+%and the second pspectrum in figure 101.
+% Fs = 1000;
+% t = (0:1/Fs:0.296)';
+% x = cos(2*pi*t*200)+0.1*randn(size(t));
+% xTable = timetable(seconds(t),x);
+
+%[power,freqs]=pspectrum(gwnt,fs);
+figure(101)
+%plot(freqs,power);
+pspectrum(gwnt,fs);
+% hold on
+% pspectrum(xTable);
+% legend('GWN','Sinusoidal with noise, example')
+xlabel('Frequency (Hz)')
+ylabel('Power (dB)')
+%seems flat, especially when compared to the spectrum of eg. a sinusoid
+
+deviation_zero=0;
+a_corr_gwn_xx_zero=phi_yx2(gwnt,gwnt,deviation_zero);
+display('Autocorrelation for a time shift of 0:');
+display(max(abs(a_corr_gwn_xx_zero)));
+display('The power of the signal:');
+display(std(gwnt));
+
+deviation=3999;
+a_corr_gwn_xx=phi_yx2(gwnt,gwnt,deviation);
+figure(102)
+xlim([0 deviation])
+plot(a_corr_gwn_xx)
+figure(103)
+xlim([0 200])
+plot(a_corr_gwn_xx(1:200))
+ylabel('\phi_{xx}')
+xlabel('\tau')
+%end of property check
+
 tf = [0:1:500];          % time for the filter  unit: ms
 time=[0:1:3999];         % time for the signal  unit: ms
 
@@ -100,9 +159,10 @@ y1 = yt - G0 - G1;    % residue, corrected for G0 and G1
 %
 %    second order kernel: 3rd-order cross-correlation
 %
-fi2=phi_yxx2(y1, gwnt, 999); %originally length(tf)-1 as third parameter              
+display(length(tf)-1)
+fi2=phi_yxx2(y1, gwnt, 500); %originally length(tf)-1 as third parameter              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
-h2(150:end,150:end)=0;
+%h2(150:end,150:end)=0; %this clearly improves performance here
 s = sum(sum((h2)));  % total integral of the kernel
 h2 = h2/s;              % normalize the kernel to one   
 disp(sum(sum(h2))*dt);
@@ -110,7 +170,7 @@ disp(sum(sum(h2))*dt);
 %  Note: also this scaling may have to be tweaked a little bit to optimize
 %  your predictions! Play with this.
 %%%%%%%%%%%%%%%%%%
-G2 = convh2xx(h2,gwnt,P);      % 1e order Wiener prediction with the scaled kernel 
+G2 = convh2xx(h2,gwnt,P,1);      % 1e order Wiener prediction with the scaled kernel 
 figure(4)
 plot(G0+G1+G2); %/8.5) %when ht is not normalised then we need to divide h1 by ~8.5 for them to have the same order
 legend('u(t)','y(t)','Prediction');
@@ -122,12 +182,14 @@ plot(yt);
 hold on
 plot(G0+G1+G2);
 legend('G2','y(t)','total')
-disp("corr total and yt");
+disp("corr second order and yt");
 disp(corrcoef((G0+G1+G2),yt));
-disp("corr G2 and yt");
-disp(corrcoef((G2),yt));
-disp("corr G1 and yt");
-disp(corrcoef((G1),yt));
+disp("corr first order and yt");
+disp(corrcoef((G0+G1),yt));
+disp("corr G2 and y1");
+disp(corrcoef((G2),y1));
+disp("corr G1 and y0");
+disp(corrcoef((G1),y0));
 figure(2)
 imagesc(h2(1:100,1:100));    % Look parallel to the main diagonal!
 axis xy
@@ -139,7 +201,7 @@ Diagh2 = zeros(1,length(tf));
 for n=1:length(tf)
     Diagh2(n) = h2(n,n);
 end
- mx = max(Diagh2(1:150));
+mx = max(Diagh2(1:150));
 mx2 = max(h1(1:150));
 plot(Diagh2(1:150)*mx2/mx,'r-','linewidth',2);
 hold on

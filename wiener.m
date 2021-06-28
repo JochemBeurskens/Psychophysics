@@ -66,13 +66,6 @@ xlabel('Frequency (Hz)')
 ylabel('Power (dB)')
 %seems flat, especially when compared to the spectrum of eg. a sinusoid
 
-deviation_zero=0;
-a_corr_gwn_xx_zero=phi_yx2(gwnt,gwnt,deviation_zero);
-display('Autocorrelation for a time shift of 0:');
-display(max(abs(a_corr_gwn_xx_zero)));
-display('The power of the signal:');
-display(std(gwnt));
-
 deviation=3999;
 a_corr_gwn_xx=phi_yx2(gwnt,gwnt,deviation);
 figure(102)

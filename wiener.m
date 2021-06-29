@@ -152,7 +152,7 @@ end
 %    second order kernel: 3rd-order cross-correlation
 %
 display(length(tf)-1)
-fi2=phi_yxx2(y1, gwnt, 500); %originally length(tf)-1 as third parameter              
+fi2=phi_yxx2(y1, gwnt, 1000); %originally length(tf)-1 as third parameter              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
 %h2(150:end,150:end)=0; %this clearly improves performance here
 s = sum(sum((h2)));  % total integral of the kernel
@@ -190,10 +190,21 @@ else
     plot((G1+G2)/scaling_factor);
 end
 legend('y(t)','second order')
-disp("corr second order and yt");
-disp(corrcoef((G0+G1+G2),yt));
-disp("corr first order and yt");
-disp(corrcoef((G0+G1),yt));
+% disp("corr second order and yt");
+% disp(corrcoef((G0+G1+G2),yt));
+% disp("corr first order and yt");
+% disp(corrcoef((G0+G1),yt));
+if mean_compensation==0
+    disp("corr second order and yt");
+    disp(corrcoef((G0+G1+G2),yt));
+    disp("corr first order and yt");
+    disp(corrcoef((G0+G1),yt));
+else 
+    disp("corr second order (without G0) and yt");
+    disp(corrcoef((G1+G2),yt));
+    disp("corr first order (without G0) and yt");
+    disp(corrcoef((G1),yt));
+end
 disp("corr G2 and y1");
 disp(corrcoef((G2),y1));
 disp("corr G1 and y0");

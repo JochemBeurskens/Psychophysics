@@ -1,15 +1,17 @@
-function [h0, h1, h2] = wiener(a, b,trunc_start, scaling_factor, mean_compensation)
+function [h0, h1, h2] = wiener(a, b,trunc_start, scaling_factor_a,scaling_factor_b,cutof2nd, mean_compensation)
 %
-%      [h0, h1, h2] = wiener(a, b);
-%
-%       simulates a simple static non-linearity: au+bu^2 that follows a linear filter
-%        Note that when b=0 the model is linear
-%
-%       the linear filter is: g(t) = a * exp(-t/T1) * sin(2*pi*f0*t) with T1=50 ms and f0 = 0.03 Hz/ms
-%
-%       E.g., try  [h0,h1,h2] = wiener(0,3); (no linearity)
-%                  [h0,h1,h2] = wiener(1,0); (no nonlinearity)
-%                  [h0,h1,h2] = wiener(1,3);
+%Note: I edited the wiener.m function extensively, now we have 5 inputs: a and b 
+%from the original, a trunc_start parameter to determine the start of truncation 
+%of h1, scaling_factor parameters for both the G1 and G2 predictions (note that 
+%they will be divided by this number), and a cutof2nd parameter to determine
+%the location of truncation for the 2nd order kernel,
+%and finally a mean_compensation parameter 
+%which is activated if the seventh argument is something (through if loop with 
+%nargin <5) this compensates for the cases where the non-linear component is so 
+%large that it makes all outputs positive (and thus makes the estimations be off 
+%by a near constant factor which is due to the G0 being the mean, which normally 
+%compensated for the signal not having zero mean but in this case could influence the 
+%accuracy of the estimates). 
 %
 %      A couple of instances will require some tweaking with the time base
 %      (to prevent too much contribution from random noise) 
@@ -24,7 +26,7 @@ end
 if nargin<1
    a= 1;
 end
-if nargin<5
+if nargin<7
    mean_compensation= 0; %this factor is added for the case where the predictions seem to be off by a constant, which is the case for a large non-linear part
 else
    mean_compensation= 1; 
@@ -137,10 +139,11 @@ m3=m1/m2;
 
 figure(3)
 plot(tf, h1/m3, 'r-');      % the predicted (scaled) filter is close to the real filter
+xlabel('\tau')
 legend('g(tau)','h_1(tau)');
 title('Predicted first-order kernel (h1) and the model linear filter (g)');
 
-G1 = conv(gwnt, h1);      % 1e order Wiener prediction with the scaled kernel 
+G1 = conv(gwnt, h1)/scaling_factor_a;      % 1e order Wiener prediction with the scaled kernel 
 G1 = G1(1:length(gwnt));
 if mean_compensation==0
     y1 = yt - G0 - G1;    % residue, corrected for G0 and G1
@@ -152,9 +155,18 @@ end
 %    second order kernel: 3rd-order cross-correlation
 %
 display(length(tf)-1)
-fi2=phi_yxx2(y1, gwnt, 1000); %originally length(tf)-1 as third parameter              
+fi2=phi_yxx2(y1, gwnt, 500); %originally length(tf)-1 as third parameter              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
-%h2(150:end,150:end)=0; %this clearly improves performance here
+cutof1=linspace(1,500,500);
+cutof2=linspace(1,500,500);
+%generating an anti-diagonal cutof for the 2nd order kernel
+for i = 1:500
+    for j =1:500
+       if cutof1(i)+cutof2(j)>cutof2nd
+           h2(cutof1(i),cutof2(j))=0; %this clearly improves performance here
+       end
+    end
+end
 s = sum(sum((h2)));  % total integral of the kernel
 h2 = h2/s;              % normalize the kernel to one   
 disp(sum(sum(h2))*dt);
@@ -162,7 +174,7 @@ disp(sum(sum(h2))*dt);
 %  Note: also this scaling may have to be tweaked a little bit to optimize
 %  your predictions! Play with this.
 %%%%%%%%%%%%%%%%%%
-G2 = convh2xx(h2,gwnt,P,1);      % 1e order Wiener prediction with the scaled kernel 
+G2 = convh2xx(h2,gwnt,P,1)/scaling_factor_b;      % 1e order Wiener prediction with the scaled kernel 
 figure(4)
 plot(G0+G1+G2); %/8.5) %when ht is not normalised then we need to divide h1 by ~8.5 for them to have the same order
 legend('u(t)','y(t)','Total prediction (always includes G0)');
@@ -185,9 +197,9 @@ plot(yt);
 title('The signal, and the second order prediction')
 hold on
 if mean_compensation==0
-    plot((G0+G1+G2)/scaling_factor);
+    plot((G0+G1+G2));
 else 
-    plot((G1+G2)/scaling_factor);
+    plot((G1+G2));
 end
 legend('y(t)','second order')
 % disp("corr second order and yt");
@@ -210,23 +222,37 @@ disp(corrcoef((G2),y1));
 disp("corr G1 and y0");
 disp(corrcoef((G1),y0));
 figure(2)
-imagesc(h2(1:100,1:100));    % Look parallel to the main diagonal!
+imagesc(h2(1:250,1:250));    % Look parallel to the main diagonal!
+ylabel('\tau_1')
+xlabel('\tau_2')
 axis xy
 colorbar;
 title('Second-order kernel')
 
 disp("Mean and standard deviation of the difference between the signal and the second order estimation");
-disp(mean(abs(yt-((G0+G1+G2)/scaling_factor))));
-disp(std(abs(yt-((G0+G1+G2)/scaling_factor))));
+disp(mean(abs(yt-((G0+G1+G2)))));
+disp(std(abs(yt-((G0+G1+G2)))));
 disp("Mean and standard deviation of the difference between the signal and the first order estimation");
-disp(mean(abs(yt-((G0+G1)/scaling_factor))));
-disp(std(abs(yt-((G0+G1)/scaling_factor))));
+disp(mean(abs(yt-((G0+G1)))));
+disp(std(abs(yt-((G0+G1)))));
 disp("Mean and standard deviation of the difference between the signal and G1+G2");
-disp(mean(abs(yt-((G1+G2)/scaling_factor))));
-disp(std(abs(yt-((G1+G2)/scaling_factor))));
+disp(mean(abs(yt-((G1+G2)))));
+disp(std(abs(yt-((G1+G2)))));
 disp("Mean and standard deviation of the difference between the signal and G1");
-disp(mean(abs(yt-((G1)/scaling_factor))));
-disp(std(abs(yt-((G1)/scaling_factor))));
+disp(mean(abs(yt-((G1)))));
+disp(std(abs(yt-((G1)))));
+
+%the figure below is for creating the full time range image of the second
+%order kernel.
+% figure(115)
+% Diagh2 = zeros(1,length(tf));
+% for n=1:length(tf)
+%     Diagh2(n) = h2(n,n);
+% end
+% mx = max(Diagh2);
+% mx2 = max(h1);
+% plot(Diagh2*mx2/mx,'r-','linewidth',2);
+% xlim([0,500]);
 
 figure(5)
 Diagh2 = zeros(1,length(tf));

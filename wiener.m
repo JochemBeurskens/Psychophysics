@@ -157,16 +157,22 @@ end
 display(length(tf)-1)
 fi2=phi_yxx2(y1, gwnt, 500); %originally length(tf)-1 as third parameter              
 h2=fi2/(2*P^2);         % the 2nd order Wiener kernel: only positive tau1, tau2 
-cutof1=linspace(1,500,500);
-cutof2=linspace(1,500,500);
-%generating an anti-diagonal cutof for the 2nd order kernel
-for i = 1:500
-    for j =1:500
-       if cutof1(i)+cutof2(j)>cutof2nd
-           h2(cutof1(i),cutof2(j))=0; %this clearly improves performance here
-       end
-    end
-end
+
+%anti-diagonal truncation from here on.
+% cutof1=linspace(1,500,500);
+% cutof2=linspace(1,500,500);
+% %generating an anti-diagonal cutof for the 2nd order kernel
+% for i = 1:500
+%     for j =1:500
+%        if cutof1(i)+cutof2(j)>cutof2nd
+%            h2(cutof1(i),cutof2(j))=0;
+%        end
+%     end
+% end
+
+%square like truncation from here on.
+h2(cutof2nd:end,cutof2nd:end)=0;
+
 s = sum(sum((h2)));  % total integral of the kernel
 h2 = h2/s;              % normalize the kernel to one   
 disp(sum(sum(h2))*dt);
